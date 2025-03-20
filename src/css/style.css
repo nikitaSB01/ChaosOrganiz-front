@@ -93,3 +93,9 @@ img {
     display: block;
     margin-top: 5px;
 }
+
+a {
+    color: #007bff;
+    text-decoration: underline;
+    word-break: break-all;
+}

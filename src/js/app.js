@@ -6,12 +6,20 @@ const messages = document.getElementById("messages");
 const attachBtn = document.getElementById("attach-btn");
 const fileInput = document.getElementById("file-input");
 
+function parseLinks(text) {
+  const urlRegex = /((https?:\/\/)[^\s]+)/g;
+  return text.replace(urlRegex, (url) => {
+    const cleanUrl = url.replace(/<\/?[^>]+(>|$)/g, ""); // защита от HTML
+    return `<a href="${cleanUrl}" target="_blank">${cleanUrl}</a>`;
+  });
+}
+
 // Добавление сообщения
 function addMessage(text, isSelf = false) {
   const msg = document.createElement("div");
   msg.classList.add("message");
   if (isSelf) msg.classList.add("self");
-  msg.textContent = text;
+  msg.innerHTML = parseLinks(text); // ← здесь подставляем с обработкой
   messages.appendChild(msg);
   messages.scrollTop = messages.scrollHeight;
 }

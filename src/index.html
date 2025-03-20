@@ -1,11 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chaos Organizer</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div class="container">
+      <aside class="sidebar">
+        <h2>Файлы</h2>
+        <ul>
+          <li><span>📎</span> Все</li>
+          <li><span>🖼</span> Изображения</li>
+          <li><span>🎵</span> Аудио</li>
+          <li><span>📹</span> Видео</li>
+          <li><span>⭐</span> Избранное</li>
+        </ul>
+      </aside>
+      <main class="chat">
+        <div class="messages" id="messages"></div>
+        <form class="input-form" id="message-form">
+          <input
+            type="text"
+            id="message-input"
+            placeholder="Введите сообщение..."
+            autocomplete="off"
+          />
+          <input type="file" id="file-input" hidden />
+          <button type="button" id="attach-btn">📎</button>
+          <button type="submit">➤</button>
+        </form>
+      </main>
+    </div>
   </body>
 </html>

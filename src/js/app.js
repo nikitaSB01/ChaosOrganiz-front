@@ -16,6 +16,33 @@ function addMessage(text, isSelf = false) {
   messages.scrollTop = messages.scrollHeight;
 }
 
+// обработка файлов  (похожа на drag & drop, но универсальна)
+function handleFiles(files) {
+  files.forEach((file) => {
+    const fileURL = URL.createObjectURL(file);
+    const msg = document.createElement("div");
+    msg.classList.add("message", "self");
+
+    if (file.type.startsWith("image/")) {
+      const img = document.createElement("img");
+      img.src = fileURL;
+      img.style.maxWidth = "200px";
+      img.style.borderRadius = "8px";
+      msg.appendChild(img);
+    } else {
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.download = file.name;
+      link.textContent = `📎 ${file.name}`;
+      link.target = "_blank";
+      msg.appendChild(link);
+    }
+
+    messages.appendChild(msg);
+    messages.scrollTop = messages.scrollHeight;
+  });
+}
+
 // Обработка отправки текста
 form.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -29,6 +56,12 @@ form.addEventListener("submit", (e) => {
 // Прикрепление файла (эмуляция клика по скрытому input)
 attachBtn.addEventListener("click", () => {
   fileInput.click();
+});
+
+fileInput.addEventListener("change", () => {
+  const files = Array.from(fileInput.files);
+  handleFiles(files);
+  fileInput.value = ""; // сбрасываем, чтобы можно было выбрать тот же файл снова
 });
 
 // Обработка Drag & Drop файлов в messages

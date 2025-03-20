@@ -30,3 +30,43 @@ form.addEventListener("submit", (e) => {
 attachBtn.addEventListener("click", () => {
   fileInput.click();
 });
+
+// Обработка Drag & Drop файлов в messages
+messages.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  messages.style.border = "2px dashed #007bff";
+});
+
+messages.addEventListener("dragleave", () => {
+  messages.style.border = "1px solid #ccc";
+});
+
+messages.addEventListener("drop", (e) => {
+  e.preventDefault();
+  messages.style.border = "1px solid #ccc";
+
+  const files = Array.from(e.dataTransfer.files);
+  files.forEach((file) => {
+    const fileURL = URL.createObjectURL(file);
+    const msg = document.createElement("div");
+    msg.classList.add("message", "self");
+
+    if (file.type.startsWith("image/")) {
+      const img = document.createElement("img");
+      img.src = fileURL;
+      img.style.maxWidth = "200px";
+      img.style.borderRadius = "8px";
+      msg.appendChild(img);
+    } else {
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.download = file.name;
+      link.textContent = `📎 ${file.name}`;
+      link.target = "_blank";
+      msg.appendChild(link);
+    }
+
+    messages.appendChild(msg);
+    messages.scrollTop = messages.scrollHeight;
+  });
+});

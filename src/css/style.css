@@ -51,6 +51,7 @@ body {
     margin-bottom: 10px;
     display: flex;
     flex-direction: column;
+    transition: border 0.3s ease;
 }
 
 .message {
@@ -86,4 +87,9 @@ body {
     color: white;
     font-size: 1.1rem;
     cursor: pointer;
+}
+
+img {
+    display: block;
+    margin-top: 5px;
 }

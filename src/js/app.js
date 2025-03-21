@@ -5,6 +5,9 @@ const input = document.getElementById("message-input");
 const messages = document.getElementById("messages");
 const attachBtn = document.getElementById("attach-btn");
 const fileInput = document.getElementById("file-input");
+const API_URL = "http://localhost:7070/messages"; // потом заменим на Render
+const WS_URL = "ws://localhost:7070"; // потом заменим на Render
+const socket = new WebSocket(WS_URL);
 
 function parseLinks(text) {
   const urlRegex = /((https?:\/\/)[^\s]+)/g;
@@ -23,6 +26,11 @@ function addMessage(text, isSelf = false) {
   messages.appendChild(msg);
   messages.scrollTop = messages.scrollHeight;
 }
+
+socket.addEventListener("message", (event) => {
+  const msg = JSON.parse(event.data);
+  addMessage(msg.text, true); // всегда .self
+});
 
 // обработка файлов  (похожа на drag & drop, но универсальна)
 function handleFiles(files) {
@@ -52,12 +60,23 @@ function handleFiles(files) {
 }
 
 // Обработка отправки текста
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const text = input.value.trim();
-  if (text) {
-    addMessage(text, true);
+  if (!text) return;
+
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+
     input.value = "";
+  } catch (err) {
+    console.error("Ошибка отправки:", err);
   }
 });
 
@@ -111,3 +130,18 @@ messages.addEventListener("drop", (e) => {
     messages.scrollTop = messages.scrollHeight;
   });
 });
+
+async function fetchMessages() {
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+
+    data.forEach((msg) => {
+      addMessage(msg.text, true); // пока всё как self
+    });
+  } catch (err) {
+    console.error("Ошибка при загрузке сообщений:", err);
+  }
+}
+
+fetchMessages();

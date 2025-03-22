@@ -122,3 +122,19 @@ a {
     background: #ddd;
     cursor: pointer;
 }
+
+/* дата время */
+.date-header {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #555;
+    margin: 10px 0;
+}
+
+.timestamp {
+    display: block;
+    text-align: right;
+    font-size: 0.7rem;
+    color: #888;
+    margin-top: 4px;
+}

@@ -6,6 +6,7 @@ const messages = document.getElementById("messages");
 const attachBtn = document.getElementById("attach-btn");
 const fileInput = document.getElementById("file-input");
 const allMessages = []; // для хранения всех сообщений
+let pinnedMessage = null;
 
 const API_URL = "http://localhost:7070/messages";
 const UPLOAD_URL = "http://localhost:7070/upload";
@@ -43,6 +44,70 @@ function renderMessages(messagesList) {
       messages.appendChild(dateHeader);
     }
 
+    /* закреп */
+    function renderPinned() {
+      const container = document.getElementById("pinned-container");
+      container.innerHTML = "";
+
+      if (!pinnedMessage) {
+        container.style.display = "none";
+        return;
+      }
+
+      const wrapper = document.createElement("div");
+      wrapper.classList.add("pinned-wrapper");
+
+      const content = document.createElement("div");
+      content.classList.add("message", "self", "pinned-message");
+
+      const linkToOriginal = document.createElement("a");
+      linkToOriginal.href = `#msg-${pinnedMessage.id}`;
+      linkToOriginal.addEventListener("click", (e) => {
+        e.preventDefault();
+        const target = document.getElementById(`msg-${pinnedMessage.id}`);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          target.classList.add("highlighted");
+          setTimeout(() => target.classList.remove("highlighted"), 1500);
+        }
+      });
+
+      linkToOriginal.classList.add("pinned-link");
+      if (pinnedMessage.type === "text") {
+        // eslint-disable-next-line operator-linebreak
+        const shortText =
+          pinnedMessage.text.length > 20
+            ? `${pinnedMessage.text.slice(0, 20)}...`
+            : pinnedMessage.text;
+        linkToOriginal.textContent = shortText;
+      } else if (pinnedMessage.type === "file") {
+        const ext = pinnedMessage.text.toLowerCase();
+        if (/\.(jpe?g|png|gif|webp)$/i.test(ext)) {
+          linkToOriginal.textContent = "Изображение";
+        } else if (/\.(mp4|webm|mov)$/i.test(ext)) {
+          linkToOriginal.textContent = "Видео";
+        } else {
+          linkToOriginal.textContent = "Файл";
+        }
+      }
+
+      content.appendChild(linkToOriginal);
+
+      const unpin = document.createElement("button");
+      unpin.classList.add("unpin-btn");
+      unpin.textContent = "✖";
+      unpin.title = "Открепить";
+      unpin.addEventListener("click", () => {
+        pinnedMessage = null;
+        renderPinned();
+      });
+
+      wrapper.appendChild(content);
+      wrapper.appendChild(unpin);
+      container.appendChild(wrapper);
+      container.style.display = "block";
+    }
+
     // создаём сообщение
     const msgBlock = document.createElement("div");
     msgBlock.classList.add("message", "self");
@@ -72,8 +137,22 @@ function renderMessages(messagesList) {
     timeTag.classList.add("timestamp");
     timeTag.textContent = timeLabel;
     msgBlock.appendChild(timeTag);
+    msgBlock.id = `msg-${msg.id}`;
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("message-wrapper");
 
-    messages.appendChild(msgBlock);
+    const pinBtn = document.createElement("button");
+    pinBtn.classList.add("pin-btn");
+    pinBtn.textContent = "📌";
+    pinBtn.title = "Закрепить";
+    pinBtn.addEventListener("click", () => {
+      pinnedMessage = msg;
+      renderPinned();
+    });
+
+    wrapper.appendChild(pinBtn);
+    wrapper.appendChild(msgBlock);
+    messages.appendChild(wrapper);
   });
 
   messages.scrollTop = messages.scrollHeight;

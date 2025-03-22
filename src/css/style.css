@@ -138,3 +138,80 @@ a {
     color: #888;
     margin-top: 4px;
 }
+
+/* закреп */
+.message-wrapper {
+    display: flex;
+    justify-content: end;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.pin-btn {
+    font-size: 12px; /* было 14px */
+    margin-right: 6px; /* чуть компактнее */
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    color: #888;
+    align-self: flex-end; /* лучше выравнивание */
+}
+
+.pin-btn:hover {
+    color: #007bff;
+    transform: scale(1.1);
+}
+
+.pinned-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.pinned-wrapper .unpin-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #999;
+    padding: 4px 8px;
+}
+
+.pinned-link {
+    color: #000;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.pinned-link:hover {
+    text-decoration: underline;
+    color: #007bff;
+}
+
+.pinned-wrapper .unpin-btn:hover {
+    color: #ff5c5c;
+    transform: scale(1.1);
+}
+
+.highlighted {
+    outline: 2px solid #007bff;
+    animation: blink 1.5s ease;
+}
+
+@keyframes blink {
+    0% {
+        outline-color: transparent;
+    }
+    50% {
+        outline-color: #007bff;
+    }
+    100% {
+        outline-color: transparent;
+    }
+}

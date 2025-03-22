@@ -14,12 +14,85 @@ const FILE_BASE_URL = "http://localhost:7070";
 const WS_URL = "ws://localhost:7070";
 const socket = new WebSocket(WS_URL);
 
+const savedPinned = localStorage.getItem("pinnedMessage");
+if (savedPinned) {
+  try {
+    pinnedMessage = JSON.parse(savedPinned);
+  } catch (e) {
+    pinnedMessage = null;
+  }
+}
+
 function parseLinks(text) {
   const urlRegex = /((https?:\/\/)[^\s]+)/g;
   return text.replace(urlRegex, (url) => {
     const cleanUrl = url.replace(/<\/?[^>]+(>|$)/g, "");
     return `<a href="${cleanUrl}" target="_blank">${cleanUrl}</a>`;
   });
+}
+/* закреп */
+function renderPinned() {
+  const container = document.getElementById("pinned-container");
+  container.innerHTML = "";
+
+  if (!pinnedMessage) {
+    container.style.display = "none";
+    return;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.classList.add("pinned-wrapper");
+
+  const content = document.createElement("div");
+  content.classList.add("message", "self", "pinned-message");
+
+  const linkToOriginal = document.createElement("a");
+  linkToOriginal.href = `#msg-${pinnedMessage.id}`;
+  linkToOriginal.addEventListener("click", (e) => {
+    e.preventDefault();
+    const target = document.getElementById(`msg-${pinnedMessage.id}`);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.classList.add("highlighted");
+      setTimeout(() => target.classList.remove("highlighted"), 1500);
+    }
+  });
+
+  linkToOriginal.classList.add("pinned-link");
+  if (pinnedMessage.type === "text") {
+    // eslint-disable-next-line operator-linebreak
+    const shortText =
+      pinnedMessage.text.length > 20
+        ? `${pinnedMessage.text.slice(0, 20)}...`
+        : pinnedMessage.text;
+    linkToOriginal.textContent = shortText;
+  } else if (pinnedMessage.type === "file") {
+    const ext = pinnedMessage.text.toLowerCase();
+    if (/\.(jpe?g|png|gif|webp)$/i.test(ext)) {
+      linkToOriginal.textContent = "Изображение";
+    } else if (/\.(mp4|webm|mov)$/i.test(ext)) {
+      linkToOriginal.textContent = "Видео";
+    } else {
+      linkToOriginal.textContent = "Файл";
+    }
+  }
+
+  content.appendChild(linkToOriginal);
+
+  const unpin = document.createElement("button");
+  unpin.classList.add("unpin-btn");
+  unpin.textContent = "✖";
+  unpin.title = "Открепить";
+  unpin.addEventListener("click", () => {
+    pinnedMessage = null;
+    localStorage.removeItem("pinnedMessage");
+    renderPinned();
+  });
+
+  wrapper.appendChild(content);
+  wrapper.appendChild(unpin);
+  container.appendChild(wrapper);
+  container.style.display = "block";
 }
 
 function renderMessages(messagesList) {
@@ -42,70 +115,6 @@ function renderMessages(messagesList) {
       dateHeader.classList.add("date-header");
       dateHeader.textContent = dateLabel;
       messages.appendChild(dateHeader);
-    }
-
-    /* закреп */
-    function renderPinned() {
-      const container = document.getElementById("pinned-container");
-      container.innerHTML = "";
-
-      if (!pinnedMessage) {
-        container.style.display = "none";
-        return;
-      }
-
-      const wrapper = document.createElement("div");
-      wrapper.classList.add("pinned-wrapper");
-
-      const content = document.createElement("div");
-      content.classList.add("message", "self", "pinned-message");
-
-      const linkToOriginal = document.createElement("a");
-      linkToOriginal.href = `#msg-${pinnedMessage.id}`;
-      linkToOriginal.addEventListener("click", (e) => {
-        e.preventDefault();
-        const target = document.getElementById(`msg-${pinnedMessage.id}`);
-        if (target) {
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
-          target.classList.add("highlighted");
-          setTimeout(() => target.classList.remove("highlighted"), 1500);
-        }
-      });
-
-      linkToOriginal.classList.add("pinned-link");
-      if (pinnedMessage.type === "text") {
-        // eslint-disable-next-line operator-linebreak
-        const shortText =
-          pinnedMessage.text.length > 20
-            ? `${pinnedMessage.text.slice(0, 20)}...`
-            : pinnedMessage.text;
-        linkToOriginal.textContent = shortText;
-      } else if (pinnedMessage.type === "file") {
-        const ext = pinnedMessage.text.toLowerCase();
-        if (/\.(jpe?g|png|gif|webp)$/i.test(ext)) {
-          linkToOriginal.textContent = "Изображение";
-        } else if (/\.(mp4|webm|mov)$/i.test(ext)) {
-          linkToOriginal.textContent = "Видео";
-        } else {
-          linkToOriginal.textContent = "Файл";
-        }
-      }
-
-      content.appendChild(linkToOriginal);
-
-      const unpin = document.createElement("button");
-      unpin.classList.add("unpin-btn");
-      unpin.textContent = "✖";
-      unpin.title = "Открепить";
-      unpin.addEventListener("click", () => {
-        pinnedMessage = null;
-        renderPinned();
-      });
-
-      wrapper.appendChild(content);
-      wrapper.appendChild(unpin);
-      container.appendChild(wrapper);
-      container.style.display = "block";
     }
 
     // создаём сообщение
@@ -147,6 +156,7 @@ function renderMessages(messagesList) {
     pinBtn.title = "Закрепить";
     pinBtn.addEventListener("click", () => {
       pinnedMessage = msg;
+      localStorage.setItem("pinnedMessage", JSON.stringify(msg));
       renderPinned();
     });
 
@@ -228,6 +238,7 @@ async function fetchMessages() {
 
     allMessages.push(...data);
     renderMessages(allMessages);
+    renderPinned(); // восстановим закреп
   } catch (err) {
     console.error("Ошибка при загрузке сообщений:", err);
   }

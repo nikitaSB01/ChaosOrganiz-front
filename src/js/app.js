@@ -5,6 +5,7 @@ const input = document.getElementById("message-input");
 const messages = document.getElementById("messages");
 const attachBtn = document.getElementById("attach-btn");
 const fileInput = document.getElementById("file-input");
+const allMessages = []; // для хранения всех сообщений
 
 const API_URL = "http://localhost:7070/messages";
 const UPLOAD_URL = "http://localhost:7070/upload";
@@ -52,13 +53,21 @@ function renderUploadedFile(relativePath) {
   messages.scrollTop = messages.scrollHeight;
 }
 
+function renderMessages(messagesList) {
+  messages.innerHTML = ""; // очищаем перед рендером
+  messagesList.forEach((msg) => {
+    if (msg.type === "text") {
+      addMessage(parseLinks(msg.text));
+    } else if (msg.type === "file") {
+      renderUploadedFile(msg.text);
+    }
+  });
+}
+
 socket.addEventListener("message", (event) => {
   const msg = JSON.parse(event.data);
-  if (msg.type === "text") {
-    addMessage(parseLinks(msg.text));
-  } else if (msg.type === "file") {
-    renderUploadedFile(msg.text);
-  }
+  allMessages.push(msg);
+  renderMessages(allMessages); // всегда перерисовываем
 });
 
 form.addEventListener("submit", async (e) => {
@@ -123,16 +132,37 @@ async function fetchMessages() {
     const res = await fetch(API_URL);
     const data = await res.json();
 
-    data.forEach((msg) => {
-      if (msg.type === "text") {
-        addMessage(parseLinks(msg.text));
-      } else if (msg.type === "file") {
-        renderUploadedFile(msg.text);
-      }
-    });
+    allMessages.push(...data);
+    renderMessages(allMessages);
   } catch (err) {
     console.error("Ошибка при загрузке сообщений:", err);
   }
 }
 
 fetchMessages();
+
+/* логика поиска */
+const searchInput = document.getElementById("search-input");
+const clearBtn = document.getElementById("clear-search");
+
+searchInput.addEventListener("input", () => {
+  const term = searchInput.value.trim().toLowerCase();
+  if (!term) {
+    renderMessages(allMessages);
+    return;
+  }
+
+  const filtered = allMessages.filter((msg) => {
+    if (msg.type === "text") {
+      return msg.text.toLowerCase().includes(term);
+    }
+    return false;
+  });
+
+  renderMessages(filtered);
+});
+
+clearBtn.addEventListener("click", () => {
+  searchInput.value = "";
+  renderMessages(allMessages);
+});

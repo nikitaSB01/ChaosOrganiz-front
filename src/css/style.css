@@ -99,3 +99,26 @@ a {
     text-decoration: underline;
     word-break: break-all;
 }
+
+/* Стили для "поиск смс" */
+.search-panel {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+#search-input {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+#clear-search {
+    margin-left: 10px;
+    padding: 0 10px;
+    font-size: 1.2rem;
+    border: none;
+    border-radius: 8px;
+    background: #ddd;
+    cursor: pointer;
+}

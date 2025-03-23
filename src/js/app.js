@@ -106,18 +106,15 @@ function updateFloatingDate() {
   const parentRect = messages.getBoundingClientRect();
 
   let currentDate = null;
-  let i = dateHeaders.length;
 
-  while (i > 0) {
-    i -= 1;
+  for (let i = dateHeaders.length - 1; i >= 0; i -= 1) {
     const rect = dateHeaders[i].getBoundingClientRect();
-    if (rect.top - parentRect.top <= 0) {
+    if (rect.top < parentRect.top + 30) {
       currentDate = dateHeaders[i].textContent;
       break;
     }
   }
 
-  // если не найден ни один — берём первый
   if (!currentDate && dateHeaders.length > 0) {
     currentDate = dateHeaders[0].textContent;
   }
@@ -218,8 +215,11 @@ function renderMessages(messagesList, append = false, scrollToBottom = false) {
   if (scrollToBottom) {
     messages.scrollTop = messages.scrollHeight;
   }
-
-  updateFloatingDate(); // Показываем дату сразу
+  // 👇 Добавь это
+  setTimeout(() => {
+    updateFloatingDate();
+  }, 0);
+  /*   updateFloatingDate(); // Показываем дату сразу  */
 }
 
 // 🔁 Lazy loading
@@ -311,13 +311,44 @@ async function fetchMessages() {
     renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);
     const chunk = allMessages.slice(renderStart);
     renderMessages(chunk, false, true);
+    // после рендера подождём загрузки всех изображений и прокрутим вниз
+    const imgs = messages.querySelectorAll("img");
+    if (imgs.length) {
+      let loaded = 0;
+      imgs.forEach((img) => {
+        if (img.complete) {
+          loaded += 1;
+        } else {
+          img.addEventListener("load", () => {
+            loaded += 1;
+            if (loaded === imgs.length) {
+              messages.scrollTop = messages.scrollHeight;
+            }
+          });
+        }
+      });
+
+      // если все уже загружены
+      if (loaded === imgs.length) {
+        messages.scrollTop = messages.scrollHeight;
+      }
+    } else {
+      // если изображений нет — прокручиваем сразу
+      messages.scrollTop = messages.scrollHeight;
+    }
+
     renderPinned();
+
+    // 👇 Добавь это
+    setTimeout(() => {
+      updateFloatingDate();
+    }, 0);
   } catch (err) {
     console.error("Ошибка при загрузке сообщений:", err);
   }
 
   // ✅ Покажем дату сразу после загрузки
-  updateFloatingDate();
+  /*   updateFloatingDate(); */
 }
 
 fetchMessages();

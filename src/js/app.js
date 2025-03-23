@@ -191,31 +191,43 @@ function renderMessages(messagesList, append = false, scrollToBottom = false) {
     const wrapper = document.createElement("div");
     wrapper.classList.add("message-wrapper");
 
-    const pinBtn = document.createElement("button");
+    // ⭐ Избранное
     const starBtn = document.createElement("button");
     starBtn.classList.add("star-btn");
-    starBtn.textContent = "⭐";
+    starBtn.innerHTML = "☆";
     starBtn.title = "Добавить в избранное";
 
     const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
-
     const isFavorite = favorites.some((fav) => fav.id === msg.id);
     if (isFavorite) {
       starBtn.classList.add("active");
+      starBtn.innerHTML = "★";
     }
 
     starBtn.addEventListener("click", () => {
       const stored = JSON.parse(localStorage.getItem("favorites") || "[]");
-      const updated = stored.some((f) => f.id === msg.id)
-        ? stored.filter((f) => f.id !== msg.id)
-        : [...stored, msg];
+      const index = stored.findIndex((f) => f.id === msg.id);
+      if (index >= 0) {
+        stored.splice(index, 1);
+      } else {
+        stored.push(msg);
+      }
 
-      localStorage.setItem("favorites", JSON.stringify(updated));
-      renderMessages(allMessages.slice(renderStart)); // обновим отрисовку
+      localStorage.setItem("favorites", JSON.stringify(stored));
+
+      const isInFavoritesView = document
+        .querySelector(".sidebar li.active")
+        ?.textContent.includes("Избранное");
+
+      if (isInFavoritesView) {
+        renderMessages(stored, false, true);
+      } else {
+        renderMessages(allMessages.slice(renderStart));
+      }
     });
 
-    wrapper.appendChild(starBtn); // ДО pinBtn.appendChild(msgBlock)
-
+    // 📌 Закрепление
+    const pinBtn = document.createElement("button");
     pinBtn.classList.add("pin-btn");
     pinBtn.textContent = "📌";
     pinBtn.title = "Закрепить";
@@ -225,6 +237,7 @@ function renderMessages(messagesList, append = false, scrollToBottom = false) {
       renderPinned();
     });
 
+    wrapper.appendChild(starBtn);
     wrapper.appendChild(pinBtn);
     wrapper.appendChild(msgBlock);
     container.appendChild(wrapper);
@@ -239,11 +252,10 @@ function renderMessages(messagesList, append = false, scrollToBottom = false) {
   if (scrollToBottom) {
     messages.scrollTop = messages.scrollHeight;
   }
-  // 👇 Добавь это
+
   setTimeout(() => {
     updateFloatingDate();
   }, 0);
-  /*   updateFloatingDate(); // Показываем дату сразу  */
 }
 
 // 🔁 Lazy loading
@@ -402,6 +414,11 @@ clearBtn.addEventListener("click", () => {
 /*  Добавим обработчик клика по «⭐ Избранное» в сайдбаре: */
 document.querySelectorAll(".sidebar li").forEach((item) => {
   item.addEventListener("click", (e) => {
+    document
+      .querySelectorAll(".sidebar li")
+      .forEach((li) => li.classList.remove("active"));
+    e.currentTarget.classList.add("active");
+
     const label = e.currentTarget.textContent.trim();
 
     if (label.includes("Избранное")) {

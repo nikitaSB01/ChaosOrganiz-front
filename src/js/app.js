@@ -5,11 +5,14 @@ const input = document.getElementById("message-input");
 const messages = document.getElementById("messages");
 const attachBtn = document.getElementById("attach-btn");
 const fileInput = document.getElementById("file-input");
-const allMessages = []; // для хранения всех сообщений
+const floatingDate = document.getElementById("floating-date");
+const searchInput = document.getElementById("search-input");
+const clearBtn = document.getElementById("clear-search");
+
+const allMessages = [];
 let pinnedMessage = null;
 const CHUNK_SIZE = 10;
 let renderStart = 0;
-let loadedMessagesCount = 0;
 
 const API_URL = "http://localhost:7070/messages";
 const UPLOAD_URL = "http://localhost:7070/upload";
@@ -17,6 +20,7 @@ const FILE_BASE_URL = "http://localhost:7070";
 const WS_URL = "ws://localhost:7070";
 const socket = new WebSocket(WS_URL);
 
+// Восстанавливаем закреплённое сообщение
 const savedPinned = localStorage.getItem("pinnedMessage");
 if (savedPinned) {
   try {
@@ -33,7 +37,7 @@ function parseLinks(text) {
     return `<a href="${cleanUrl}" target="_blank">${cleanUrl}</a>`;
   });
 }
-/* закреп */
+
 function renderPinned() {
   const container = document.getElementById("pinned-container");
   container.innerHTML = "";
@@ -63,7 +67,6 @@ function renderPinned() {
 
   linkToOriginal.classList.add("pinned-link");
   if (pinnedMessage.type === "text") {
-    // eslint-disable-next-line operator-linebreak
     const shortText =
       pinnedMessage.text.length > 20
         ? `${pinnedMessage.text.slice(0, 20)}...`
@@ -71,13 +74,11 @@ function renderPinned() {
     linkToOriginal.textContent = shortText;
   } else if (pinnedMessage.type === "file") {
     const ext = pinnedMessage.text.toLowerCase();
-    if (/\.(jpe?g|png|gif|webp)$/i.test(ext)) {
-      linkToOriginal.textContent = "Изображение";
-    } else if (/\.(mp4|webm|mov)$/i.test(ext)) {
-      linkToOriginal.textContent = "Видео";
-    } else {
-      linkToOriginal.textContent = "Файл";
-    }
+    linkToOriginal.textContent = /\.(jpe?g|png|gif|webp)$/i.test(ext)
+      ? "Изображение"
+      : /\.(mp4|webm|mov)$/i.test(ext)
+      ? "Видео"
+      : "Файл";
   }
 
   content.appendChild(linkToOriginal);
@@ -98,30 +99,55 @@ function renderPinned() {
   container.style.display = "block";
 }
 
-function renderMessages(messagesList, append = false, scrollToBottom = false) {
-  if (!append) {
-    messages.innerHTML = "";
-  }
+function updateFloatingDate() {
+  const dateHeaders = messages.querySelectorAll(".date-header");
+  const parentRect = messages.getBoundingClientRect();
 
-  let lastDate = null;
+  let currentDate = null;
+
+  dateHeaders.forEach((header) => {
+    const rect = header.getBoundingClientRect();
+    if (rect.top - parentRect.top >= 0 && currentDate === null) {
+      currentDate = header.textContent;
+    }
+  });
+
+  if (currentDate) {
+    floatingDate.textContent = currentDate;
+    floatingDate.style.display = "block";
+  } else {
+    floatingDate.style.display = "none";
+  }
+}
+
+messages.addEventListener("scroll", updateFloatingDate);
+
+function renderMessages(messagesList, append = false, scrollToBottom = false) {
+  if (!append) messages.innerHTML = "";
+
   const container = document.createDocumentFragment();
 
+  const firstByDate = new Map();
   messagesList.forEach((msg) => {
-    // 🔒 Проверка: если уже есть такое сообщение — не рендерим его повторно
+    const date = new Date(msg.date).toLocaleDateString("ru-RU");
+    if (!firstByDate.has(date)) {
+      firstByDate.set(date, msg.id);
+    }
+  });
+
+  messagesList.forEach((msg) => {
     if (document.getElementById(`msg-${msg.id}`)) return;
 
-    const dateObj = new Date(msg.date);
-    const dateLabel = dateObj.toLocaleDateString("ru-RU");
-    const timeLabel = dateObj.toLocaleTimeString("ru-RU", {
+    const dateLabel = new Date(msg.date).toLocaleDateString("ru-RU");
+    const timeLabel = new Date(msg.date).toLocaleTimeString("ru-RU", {
       hour: "2-digit",
       minute: "2-digit",
     });
 
-    // 📅 Заголовок с датой (один на день)
-    if (lastDate !== dateLabel) {
-      lastDate = dateLabel;
+    if (firstByDate.get(dateLabel) === msg.id) {
       const dateHeader = document.createElement("div");
       dateHeader.classList.add("date-header");
+      dateHeader.setAttribute("data-date", dateLabel);
       dateHeader.textContent = dateLabel;
       container.appendChild(dateHeader);
     }
@@ -182,50 +208,36 @@ function renderMessages(messagesList, append = false, scrollToBottom = false) {
   if (scrollToBottom) {
     messages.scrollTop = messages.scrollHeight;
   }
+
+  updateFloatingDate(); // Показываем дату сразу
 }
 
+// 🔁 Lazy loading
 messages.addEventListener("scroll", () => {
   if (messages.scrollTop === 0 && renderStart > 0) {
     const prevHeight = messages.scrollHeight;
-
-    const newStart = renderStart - CHUNK_SIZE;
-    if (newStart < 0) renderStart = 0;
-    else renderStart = newStart;
-
+    const newStart = Math.max(0, renderStart - CHUNK_SIZE);
+    renderStart = newStart;
     const chunk = allMessages.slice(renderStart, renderStart + CHUNK_SIZE);
-
-    renderMessages(chunk, true); // append = true
-
-    const newHeight = messages.scrollHeight;
-    messages.scrollTop = newHeight - prevHeight;
+    renderMessages(chunk, true);
+    messages.scrollTop = messages.scrollHeight - prevHeight;
   }
 });
 
-/* логика поиска */
-const searchInput = document.getElementById("search-input");
-const clearBtn = document.getElementById("clear-search");
-
+// 📡 WebSocket
 socket.addEventListener("message", (event) => {
   const msg = JSON.parse(event.data);
   allMessages.push(msg);
   allMessages.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  // если пользователь ищет — не перерисовываем
   if (searchInput.value.trim()) return;
-
-  // если чат уже внизу (видны последние сообщения), продолжаем скролл
-  // eslint-disable-next-line operator-linebreak
   const isNearBottom =
     messages.scrollHeight - messages.scrollTop - messages.clientHeight < 50;
-
-  // рендерим последние сообщения (НЕ весь список!)
   const chunk = allMessages.slice(-CHUNK_SIZE);
-  renderStart = allMessages.length - CHUNK_SIZE;
-  if (renderStart < 0) renderStart = 0;
-
+  renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);
   renderMessages(chunk, false, isNearBottom);
 });
 
+// 📤 Отправка
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const text = input.value.trim();
@@ -243,6 +255,7 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
+// 📎 Загрузка файла
 async function uploadFile(file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -257,13 +270,9 @@ async function uploadFile(file) {
   }
 }
 
-attachBtn.addEventListener("click", () => {
-  fileInput.click();
-});
-
+attachBtn.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", () => {
-  const files = Array.from(fileInput.files);
-  files.forEach(uploadFile);
+  [...fileInput.files].forEach(uploadFile);
   fileInput.value = "";
 });
 
@@ -271,39 +280,28 @@ messages.addEventListener("dragover", (e) => {
   e.preventDefault();
   messages.style.border = "2px dashed #007bff";
 });
-
 messages.addEventListener("dragleave", () => {
   messages.style.border = "1px solid #ccc";
 });
-
 messages.addEventListener("drop", (e) => {
   e.preventDefault();
   messages.style.border = "1px solid #ccc";
-  const files = Array.from(e.dataTransfer.files);
-  files.forEach(uploadFile);
+  [...e.dataTransfer.files].forEach(uploadFile);
 });
 
+// 📥 Получение сообщений
 async function fetchMessages() {
   try {
     const res = await fetch(API_URL);
     const data = await res.json();
-
-    // Сортировка
     allMessages.length = 0;
     allMessages.push(
       ...data.sort((a, b) => new Date(a.date) - new Date(b.date))
     );
-
-    // Запоминаем старт
-    renderStart = allMessages.length - CHUNK_SIZE;
-    if (renderStart < 0) renderStart = 0;
-
-    loadedMessagesCount = 0;
-
+    renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);
     const chunk = allMessages.slice(renderStart);
-    renderMessages(chunk, false, true); // scrollToBottom = true
-
-    renderPinned(); // восстановим закреп
+    renderMessages(chunk, false, true);
+    renderPinned();
   } catch (err) {
     console.error("Ошибка при загрузке сообщений:", err);
   }
@@ -311,29 +309,24 @@ async function fetchMessages() {
 
 fetchMessages();
 
+// 🔍 Поиск
 searchInput.addEventListener("input", () => {
   const term = searchInput.value.trim().toLowerCase();
   if (!term) {
-    renderMessages(allMessages);
+    const chunk = allMessages.slice(renderStart);
+    renderMessages(chunk, false, true);
     return;
   }
-
-  const filtered = allMessages.filter((msg) => {
-    if (msg.type === "text") {
-      return msg.text.toLowerCase().includes(term);
-    }
-    return false;
-  });
-
+  const filtered = allMessages.filter(
+    (msg) => msg.type === "text" && msg.text.toLowerCase().includes(term)
+  );
   renderStart = 0;
   renderMessages(filtered);
 });
 
 clearBtn.addEventListener("click", () => {
   searchInput.value = "";
-  renderStart = allMessages.length - CHUNK_SIZE;
-  if (renderStart < 0) renderStart = 0;
+  renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);
   const chunk = allMessages.slice(renderStart);
-  loadedMessagesCount = chunk.length;
   renderMessages(chunk, false, true);
 });

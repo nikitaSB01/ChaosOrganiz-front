@@ -180,6 +180,13 @@ function renderMessages(messagesList, append = false, scrollToBottom = false) {
         link.target = "_blank";
         msgBlock.appendChild(link);
       }
+    } else if (msg.type === "geo") {
+      const [lat, lon] = msg.text.split(",");
+      const link = document.createElement("a");
+      link.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
+      link.target = "_blank";
+      link.textContent = `📍 Геолокация (${lat}, ${lon})`;
+      msgBlock.appendChild(link);
     }
 
     const timeTag = document.createElement("span");
@@ -430,4 +437,42 @@ document.querySelectorAll(".sidebar li").forEach((item) => {
       renderMessages(chunk, false, true);
     }
   });
+});
+
+/* гео */
+const geoBtn = document.getElementById("geo-btn");
+
+geoBtn.addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    alert("Геолокация не поддерживается вашим браузером.");
+    return;
+  }
+
+  geoBtn.disabled = true;
+  geoBtn.textContent = "⏳";
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const { latitude, longitude } = position.coords;
+      const coordsText = `${latitude},${longitude}`;
+
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: coordsText, type: "geo" }),
+        });
+      } catch (err) {
+        console.error("Ошибка при отправке координат:", err);
+      } finally {
+        geoBtn.disabled = false;
+        geoBtn.textContent = "📍";
+      }
+    },
+    (error) => {
+      alert("Не удалось получить геолокацию.");
+      geoBtn.disabled = false;
+      geoBtn.textContent = "📍";
+    }
+  );
 });

@@ -192,6 +192,30 @@ function renderMessages(messagesList, append = false, scrollToBottom = false) {
     wrapper.classList.add("message-wrapper");
 
     const pinBtn = document.createElement("button");
+    const starBtn = document.createElement("button");
+    starBtn.classList.add("star-btn");
+    starBtn.textContent = "⭐";
+    starBtn.title = "Добавить в избранное";
+
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+
+    const isFavorite = favorites.some((fav) => fav.id === msg.id);
+    if (isFavorite) {
+      starBtn.classList.add("active");
+    }
+
+    starBtn.addEventListener("click", () => {
+      const stored = JSON.parse(localStorage.getItem("favorites") || "[]");
+      const updated = stored.some((f) => f.id === msg.id)
+        ? stored.filter((f) => f.id !== msg.id)
+        : [...stored, msg];
+
+      localStorage.setItem("favorites", JSON.stringify(updated));
+      renderMessages(allMessages.slice(renderStart)); // обновим отрисовку
+    });
+
+    wrapper.appendChild(starBtn); // ДО pinBtn.appendChild(msgBlock)
+
     pinBtn.classList.add("pin-btn");
     pinBtn.textContent = "📌";
     pinBtn.title = "Закрепить";
@@ -373,4 +397,20 @@ clearBtn.addEventListener("click", () => {
   renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);
   const chunk = allMessages.slice(renderStart);
   renderMessages(chunk, false, true);
+});
+
+/*  Добавим обработчик клика по «⭐ Избранное» в сайдбаре: */
+document.querySelectorAll(".sidebar li").forEach((item) => {
+  item.addEventListener("click", (e) => {
+    const label = e.currentTarget.textContent.trim();
+
+    if (label.includes("Избранное")) {
+      const favs = JSON.parse(localStorage.getItem("favorites") || "[]");
+      renderMessages(favs, false, true);
+    } else {
+      renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);
+      const chunk = allMessages.slice(renderStart);
+      renderMessages(chunk, false, true);
+    }
+  });
 });

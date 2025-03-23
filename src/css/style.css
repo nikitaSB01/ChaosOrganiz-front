@@ -223,6 +223,25 @@ a {
     animation: blink 1.5s ease;
 }
 
+/*   обработчик клика по «⭐ Избранное» в сайдбаре: */
+.star-btn {
+    font-size: 12px;
+    margin-right: 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 2px;
+    color: #f0ad4e;
+    align-self: flex-end;
+}
+.star-btn.active {
+    color: #ffc107;
+    font-weight: bold;
+}
+.star-btn:hover {
+    transform: scale(1.1);
+}
+
 @keyframes blink {
     0% {
         outline-color: transparent;

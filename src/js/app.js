@@ -74,11 +74,13 @@ function renderPinned() {
     linkToOriginal.textContent = shortText;
   } else if (pinnedMessage.type === "file") {
     const ext = pinnedMessage.text.toLowerCase();
-    linkToOriginal.textContent = /\.(jpe?g|png|gif|webp)$/i.test(ext)
-      ? "Изображение"
-      : /\.(mp4|webm|mov)$/i.test(ext)
-      ? "Видео"
-      : "Файл";
+    if (/\.(jpe?g|png|gif|webp)$/i.test(ext)) {
+      linkToOriginal.textContent = "Изображение";
+    } else if (/\.(mp4|webm|mov)$/i.test(ext)) {
+      linkToOriginal.textContent = "Видео";
+    } else {
+      linkToOriginal.textContent = "Файл";
+    }
   }
 
   content.appendChild(linkToOriginal);
@@ -100,17 +102,25 @@ function renderPinned() {
 }
 
 function updateFloatingDate() {
-  const dateHeaders = messages.querySelectorAll(".date-header");
+  const dateHeaders = [...messages.querySelectorAll(".date-header")];
   const parentRect = messages.getBoundingClientRect();
 
   let currentDate = null;
+  let i = dateHeaders.length;
 
-  dateHeaders.forEach((header) => {
-    const rect = header.getBoundingClientRect();
-    if (rect.top - parentRect.top >= 0 && currentDate === null) {
-      currentDate = header.textContent;
+  while (i > 0) {
+    i -= 1;
+    const rect = dateHeaders[i].getBoundingClientRect();
+    if (rect.top - parentRect.top <= 0) {
+      currentDate = dateHeaders[i].textContent;
+      break;
     }
-  });
+  }
+
+  // если не найден ни один — берём первый
+  if (!currentDate && dateHeaders.length > 0) {
+    currentDate = dateHeaders[0].textContent;
+  }
 
   if (currentDate) {
     floatingDate.textContent = currentDate;
@@ -305,6 +315,9 @@ async function fetchMessages() {
   } catch (err) {
     console.error("Ошибка при загрузке сообщений:", err);
   }
+
+  // ✅ Покажем дату сразу после загрузки
+  updateFloatingDate();
 }
 
 fetchMessages();

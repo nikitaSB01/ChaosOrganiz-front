@@ -7,6 +7,9 @@ const attachBtn = document.getElementById("attach-btn");
 const fileInput = document.getElementById("file-input");
 const allMessages = []; // для хранения всех сообщений
 let pinnedMessage = null;
+const CHUNK_SIZE = 10;
+let renderStart = 0;
+let loadedMessagesCount = 0;
 
 const API_URL = "http://localhost:7070/messages";
 const UPLOAD_URL = "http://localhost:7070/upload";
@@ -95,12 +98,18 @@ function renderPinned() {
   container.style.display = "block";
 }
 
-function renderMessages(messagesList) {
-  messages.innerHTML = "";
+function renderMessages(messagesList, append = false, scrollToBottom = false) {
+  if (!append) {
+    messages.innerHTML = "";
+  }
 
   let lastDate = null;
+  const container = document.createDocumentFragment();
 
   messagesList.forEach((msg) => {
+    // 🔒 Проверка: если уже есть такое сообщение — не рендерим его повторно
+    if (document.getElementById(`msg-${msg.id}`)) return;
+
     const dateObj = new Date(msg.date);
     const dateLabel = dateObj.toLocaleDateString("ru-RU");
     const timeLabel = dateObj.toLocaleTimeString("ru-RU", {
@@ -108,16 +117,15 @@ function renderMessages(messagesList) {
       minute: "2-digit",
     });
 
-    // если день сменился — вставляем заголовок даты
+    // 📅 Заголовок с датой (один на день)
     if (lastDate !== dateLabel) {
       lastDate = dateLabel;
       const dateHeader = document.createElement("div");
       dateHeader.classList.add("date-header");
       dateHeader.textContent = dateLabel;
-      messages.appendChild(dateHeader);
+      container.appendChild(dateHeader);
     }
 
-    // создаём сообщение
     const msgBlock = document.createElement("div");
     msgBlock.classList.add("message", "self");
 
@@ -141,12 +149,12 @@ function renderMessages(messagesList) {
       }
     }
 
-    // добавляем метку времени
     const timeTag = document.createElement("span");
     timeTag.classList.add("timestamp");
     timeTag.textContent = timeLabel;
     msgBlock.appendChild(timeTag);
     msgBlock.id = `msg-${msg.id}`;
+
     const wrapper = document.createElement("div");
     wrapper.classList.add("message-wrapper");
 
@@ -162,16 +170,60 @@ function renderMessages(messagesList) {
 
     wrapper.appendChild(pinBtn);
     wrapper.appendChild(msgBlock);
-    messages.appendChild(wrapper);
+    container.appendChild(wrapper);
   });
 
-  messages.scrollTop = messages.scrollHeight;
+  if (!append) {
+    messages.appendChild(container);
+  } else {
+    messages.prepend(container);
+  }
+
+  if (scrollToBottom) {
+    messages.scrollTop = messages.scrollHeight;
+  }
 }
+
+messages.addEventListener("scroll", () => {
+  if (messages.scrollTop === 0 && renderStart > 0) {
+    const prevHeight = messages.scrollHeight;
+
+    const newStart = renderStart - CHUNK_SIZE;
+    if (newStart < 0) renderStart = 0;
+    else renderStart = newStart;
+
+    const chunk = allMessages.slice(renderStart, renderStart + CHUNK_SIZE);
+
+    renderMessages(chunk, true); // append = true
+
+    const newHeight = messages.scrollHeight;
+    messages.scrollTop = newHeight - prevHeight;
+  }
+});
+
+/* логика поиска */
+const searchInput = document.getElementById("search-input");
+const clearBtn = document.getElementById("clear-search");
 
 socket.addEventListener("message", (event) => {
   const msg = JSON.parse(event.data);
   allMessages.push(msg);
-  renderMessages(allMessages); // всегда перерисовываем
+  allMessages.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // если пользователь ищет — не перерисовываем
+  if (searchInput.value.trim()) return;
+
+  // если чат уже внизу (видны последние сообщения), продолжаем скролл
+  // eslint-disable-next-line operator-linebreak
+  const isNearBottom =
+    messages.scrollHeight - messages.scrollTop - messages.clientHeight < 50;
+
+  // рендерим последние сообщения (НЕ весь список!)
+  const chunk = allMessages.slice(-CHUNK_SIZE);
+  renderStart = allMessages.length - CHUNK_SIZE;
+  if (renderStart < 0) renderStart = 0;
+
+  renderMessages(chunk, false, isNearBottom);
 });
 
 form.addEventListener("submit", async (e) => {
@@ -236,8 +288,21 @@ async function fetchMessages() {
     const res = await fetch(API_URL);
     const data = await res.json();
 
-    allMessages.push(...data);
-    renderMessages(allMessages);
+    // Сортировка
+    allMessages.length = 0;
+    allMessages.push(
+      ...data.sort((a, b) => new Date(a.date) - new Date(b.date))
+    );
+
+    // Запоминаем старт
+    renderStart = allMessages.length - CHUNK_SIZE;
+    if (renderStart < 0) renderStart = 0;
+
+    loadedMessagesCount = 0;
+
+    const chunk = allMessages.slice(renderStart);
+    renderMessages(chunk, false, true); // scrollToBottom = true
+
     renderPinned(); // восстановим закреп
   } catch (err) {
     console.error("Ошибка при загрузке сообщений:", err);
@@ -245,10 +310,6 @@ async function fetchMessages() {
 }
 
 fetchMessages();
-
-/* логика поиска */
-const searchInput = document.getElementById("search-input");
-const clearBtn = document.getElementById("clear-search");
 
 searchInput.addEventListener("input", () => {
   const term = searchInput.value.trim().toLowerCase();
@@ -264,10 +325,15 @@ searchInput.addEventListener("input", () => {
     return false;
   });
 
+  renderStart = 0;
   renderMessages(filtered);
 });
 
 clearBtn.addEventListener("click", () => {
   searchInput.value = "";
-  renderMessages(allMessages);
+  renderStart = allMessages.length - CHUNK_SIZE;
+  if (renderStart < 0) renderStart = 0;
+  const chunk = allMessages.slice(renderStart);
+  loadedMessagesCount = chunk.length;
+  renderMessages(chunk, false, true);
 });

@@ -166,12 +166,24 @@ function renderMessages(messagesList, append = false, scrollToBottom = false) {
       msgBlock.innerHTML = parseLinks(msg.text);
     } else if (msg.type === "file") {
       const url = `${FILE_BASE_URL}${msg.text}`;
+
       if (/\.(jpe?g|png|gif|webp)$/i.test(msg.text)) {
         const img = document.createElement("img");
         img.src = url;
         img.style.maxWidth = "200px";
         img.style.borderRadius = "8px";
         msgBlock.appendChild(img);
+      } else if (/\.(mp4|webm|mov)$/i.test(msg.text)) {
+        const video = document.createElement("video");
+        video.src = url;
+        video.controls = true;
+        video.style.maxWidth = "250px";
+        msgBlock.appendChild(video);
+      } else if (/\.(mp3|wav|ogg|m4a)$/i.test(msg.text)) {
+        const audio = document.createElement("audio");
+        audio.src = url;
+        audio.controls = true;
+        msgBlock.appendChild(audio);
       } else {
         const link = document.createElement("a");
         link.href = url;
@@ -421,6 +433,7 @@ clearBtn.addEventListener("click", () => {
 /*  Добавим обработчик клика по «⭐ Избранное» в сайдбаре: */
 document.querySelectorAll(".sidebar li").forEach((item) => {
   item.addEventListener("click", (e) => {
+    // сброс активного класса
     document
       .querySelectorAll(".sidebar li")
       .forEach((li) => li.classList.remove("active"));
@@ -431,7 +444,28 @@ document.querySelectorAll(".sidebar li").forEach((item) => {
     if (label.includes("Избранное")) {
       const favs = JSON.parse(localStorage.getItem("favorites") || "[]");
       renderMessages(favs, false, true);
+    } else if (label.includes("Все")) {
+      renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);
+      const chunk = allMessages.slice(renderStart);
+      renderMessages(chunk, false, true);
+    } else if (label.includes("Изображения")) {
+      const imgs = allMessages.filter(
+        (msg) =>
+          msg.type === "file" && /\.(jpe?g|png|gif|webp)$/i.test(msg.text)
+      );
+      renderMessages(imgs, false, true);
+    } else if (label.includes("Аудио")) {
+      const audios = allMessages.filter(
+        (msg) => msg.type === "file" && /\.(mp3|wav|ogg|m4a)$/i.test(msg.text)
+      );
+      renderMessages(audios, false, true);
+    } else if (label.includes("Видео")) {
+      const videos = allMessages.filter(
+        (msg) => msg.type === "file" && /\.(mp4|webm|mov)$/i.test(msg.text)
+      );
+      renderMessages(videos, false, true);
     } else {
+      // fallback
       renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);
       const chunk = allMessages.slice(renderStart);
       renderMessages(chunk, false, true);
@@ -442,37 +476,39 @@ document.querySelectorAll(".sidebar li").forEach((item) => {
 /* гео */
 const geoBtn = document.getElementById("geo-btn");
 
-geoBtn.addEventListener("click", () => {
-  if (!navigator.geolocation) {
-    alert("Геолокация не поддерживается вашим браузером.");
-    return;
-  }
+if (geoBtn) {
+  geoBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      alert("Геолокация не поддерживается вашим браузером.");
+      return;
+    }
 
-  geoBtn.disabled = true;
-  geoBtn.textContent = "⏳";
+    geoBtn.disabled = true;
+    geoBtn.textContent = "⏳";
 
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      const { latitude, longitude } = position.coords;
-      const coordsText = `${latitude},${longitude}`;
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const coordsText = `${latitude},${longitude}`;
 
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: coordsText, type: "geo" }),
-        });
-      } catch (err) {
-        console.error("Ошибка при отправке координат:", err);
-      } finally {
+        try {
+          await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: coordsText, type: "geo" }),
+          });
+        } catch (err) {
+          console.error("Ошибка при отправке координат:", err);
+        } finally {
+          geoBtn.disabled = false;
+          geoBtn.textContent = "📍";
+        }
+      },
+      () => {
+        alert("Не удалось получить геолокацию.");
         geoBtn.disabled = false;
         geoBtn.textContent = "📍";
       }
-    },
-    (error) => {
-      alert("Не удалось получить геолокацию.");
-      geoBtn.disabled = false;
-      geoBtn.textContent = "📍";
-    }
-  );
-});
+    );
+  });
+}

@@ -17,10 +17,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const CHUNK_SIZE = 10;
   let renderStart = 0;
 
-  const API_URL = "http://localhost:7070/messages";
-  const UPLOAD_URL = "http://localhost:7070/upload";
-  const FILE_BASE_URL = "http://localhost:7070";
-  const WS_URL = "ws://localhost:7070";
+  const API_URL = "https://chaosorganiz-bac.onrender.com/messages";
+  const UPLOAD_URL = "https://chaosorganiz-bac.onrender.com/upload";
+  const FILE_BASE_URL = "https://chaosorganiz-bac.onrender.com";
+  
+  const WS_URL = "wss://chaosorganiz-bac.onrender.com";
   const socket = new WebSocket(WS_URL);
 
   // Восстанавливаем закреплённое сообщение

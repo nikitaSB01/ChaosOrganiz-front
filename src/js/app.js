@@ -85,6 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         linkToOriginal.textContent = "Файл";
       }
+    } else if (pinnedMessage.type === "geo") {
+      const [lat, lon] = pinnedMessage.text.split(",");
+      linkToOriginal.textContent = `📍 Геолокация (${lat}, ${lon})`;
     }
 
     content.appendChild(linkToOriginal);

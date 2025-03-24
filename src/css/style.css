@@ -98,14 +98,20 @@ body {
 
 .input-form {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    background: #fff;
+    position: sticky;
+    bottom: 0;
 }
 
 .input-form input[type="text"] {
-    flex-grow: 1;
-    padding: 10px;
-    border-radius: 8px;
+    flex: 1;
+    padding: 8px;
     border: 1px solid #ccc;
+    border-radius: 6px;
 }
 
 .input-form button {
@@ -116,6 +122,10 @@ body {
     color: white;
     font-size: 1.1rem;
     cursor: pointer;
+    transition: background 0.3s ease;
+}
+.input-form button:hover {
+    background: #0056b3;
 }
 
 img {

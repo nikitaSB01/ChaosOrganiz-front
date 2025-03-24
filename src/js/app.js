@@ -373,29 +373,35 @@ document.addEventListener("DOMContentLoaded", () => {
       renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);
       const chunk = allMessages.slice(renderStart);
       renderMessages(chunk, false, true);
+
       // после рендера подождём загрузки всех изображений и прокрутим вниз
-      const imgs = messages.querySelectorAll("img");
-      if (imgs.length) {
+      // после рендера подождём загрузки всех изображений и прокрутим вниз
+      const mediaElements = messages.querySelectorAll("img, video, audio");
+
+      if (mediaElements.length) {
         let loaded = 0;
-        imgs.forEach((img) => {
-          if (img.complete) {
+
+        mediaElements.forEach((el) => {
+          const onLoaded = () => {
             loaded += 1;
+            if (loaded === mediaElements.length) {
+              messages.scrollTop = messages.scrollHeight;
+            }
+          };
+
+          if (el.tagName === "IMG") {
+            el.complete ? onLoaded() : el.addEventListener("load", onLoaded);
           } else {
-            img.addEventListener("load", () => {
-              loaded += 1;
-              if (loaded === imgs.length) {
-                messages.scrollTop = messages.scrollHeight;
-              }
-            });
+            el.readyState >= 2
+              ? onLoaded()
+              : el.addEventListener("loadeddata", onLoaded);
           }
         });
 
-        // если все уже загружены
-        if (loaded === imgs.length) {
+        if (loaded === mediaElements.length) {
           messages.scrollTop = messages.scrollHeight;
         }
       } else {
-        // если изображений нет — прокручиваем сразу
         messages.scrollTop = messages.scrollHeight;
       }
 
@@ -548,9 +554,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       mediaRecorder.onstop = async () => {
         console.log("💾 Запись завершена, отправляю файл...");
-        const blob = new Blob(audioChunks, { type: "audio/webm" });
-        const file = new File([blob], `recording-${Date.now()}.webm`, {
-          type: "audio/webm",
+        const blob = new Blob(audioChunks, { type: "audio/ogg" });
+        const file = new File([blob], `recording-${Date.now()}.ogg`, {
+          type: "audio/ogg",
         });
         await uploadFile(file);
       };

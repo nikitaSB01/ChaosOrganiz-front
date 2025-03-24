@@ -8,7 +8,6 @@ module.exports = {
     path: path.resolve(__dirname, "dist"),
     clean: true, // очищает dist при сборке
   },
-  mode: "development", // можно изменить на 'production' при финальной сборке
   devServer: {
     static: "./dist",
     port: 8080,

@@ -97,6 +97,8 @@ body {
 }
 
 .input-form {
+    width: 100%;
+    max-width: 100%;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -115,8 +117,10 @@ body {
 }
 
 .input-form button {
-    min-width: 36px;
-    padding: 6px 8px;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
     border: none;
     border-radius: 8px;
     background-color: #007bff;

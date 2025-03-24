@@ -38,6 +38,7 @@
         ></div>
         <div class="messages" id="messages"></div>
         <form class="input-form" id="message-form">
+          <button type="button" id="geo-btn">📍</button>
           <input
             type="text"
             id="message-input"
@@ -45,11 +46,17 @@
             autocomplete="off"
           />
           <input type="file" id="file-input" hidden />
-          <button type="button" id="geo-btn">📍</button>
           <button type="button" id="attach-btn">📎</button>
+          <button type="button" id="record-btn">🎤</button>
           <button type="submit">➤</button>
         </form>
       </main>
+    </div>
+    <div id="record-modal" class="record-modal" style="display: none">
+      <div class="record-content">
+        <p>🎙 Идёт запись...</p>
+        <button id="stop-record-btn">⏹ Завершить</button>
+      </div>
     </div>
   </body>
 </html>

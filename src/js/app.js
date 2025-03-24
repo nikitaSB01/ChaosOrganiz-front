@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const API_URL = "https://chaosorganiz-bac.onrender.com/messages";
   const UPLOAD_URL = "https://chaosorganiz-bac.onrender.com/upload";
   const FILE_BASE_URL = "https://chaosorganiz-bac.onrender.com";
-  
+
   const WS_URL = "wss://chaosorganiz-bac.onrender.com";
   const socket = new WebSocket(WS_URL);
 
@@ -200,7 +200,10 @@ document.addEventListener("DOMContentLoaded", () => {
           link.target = "_blank";
           msgBlock.appendChild(link);
         }
-      } else if (msg.type === "geo") {
+      } else if (
+        msg.type === "geo" ||
+        (msg.text && msg.text.includes(",") && !msg.type)
+      ) {
         const [lat, lon] = msg.text.split(",");
         const link = document.createElement("a");
         link.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;

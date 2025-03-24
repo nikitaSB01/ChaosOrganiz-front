@@ -115,7 +115,8 @@ body {
 }
 
 .input-form button {
-    padding: 0 16px;
+    min-width: 36px;
+    padding: 6px 8px;
     border: none;
     border-radius: 8px;
     background-color: #007bff;

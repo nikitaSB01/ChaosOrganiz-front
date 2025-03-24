@@ -255,7 +255,7 @@ a {
 }
 
 .star-btn.active {
-    color: #ffc107; /* жёлтая */
+    color: #ffc107;
 }
 
 .star-btn:hover {

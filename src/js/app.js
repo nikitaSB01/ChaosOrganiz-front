@@ -46,7 +46,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("pinned-container");
     container.innerHTML = "";
 
-    if (!pinnedMessage) {
+    if (!pinnedMessage || !allMessages.find((m) => m.id === pinnedMessage.id)) {
+      pinnedMessage = null;
+      localStorage.removeItem("pinnedMessage");
       container.style.display = "none";
       return;
     }
@@ -170,6 +172,9 @@ document.addEventListener("DOMContentLoaded", () => {
         container.appendChild(dateHeader);
       }
 
+      const wrapper = document.createElement("div");
+      wrapper.classList.add("message-wrapper");
+
       const msgBlock = document.createElement("div");
       msgBlock.classList.add("message", "self");
 
@@ -177,20 +182,21 @@ document.addEventListener("DOMContentLoaded", () => {
         msgBlock.innerHTML = parseLinks(msg.text);
       } else if (msg.type === "file") {
         const url = `${FILE_BASE_URL}${msg.text}`;
+        const filename = msg.text.split("/").pop();
 
-        if (/\.(jpe?g|png|gif|webp)$/i.test(msg.text)) {
+        if (/\.(jpe?g|png|gif|webp)$/i.test(filename)) {
           const img = document.createElement("img");
           img.src = url;
           img.style.maxWidth = "200px";
           img.style.borderRadius = "8px";
           msgBlock.appendChild(img);
-        } else if (/\.(mp4|webm|mov)$/i.test(msg.text)) {
+        } else if (/\.(mp4|webm|mov)$/i.test(filename)) {
           const video = document.createElement("video");
           video.src = url;
           video.controls = true;
           video.style.maxWidth = "250px";
           msgBlock.appendChild(video);
-        } else if (/\.(mp3|wav|ogg|m4a)$/i.test(msg.text)) {
+        } else if (/\.(mp3|wav|ogg|m4a)$/i.test(filename)) {
           const audio = document.createElement("audio");
           audio.src = url;
           audio.controls = true;
@@ -198,11 +204,35 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           const link = document.createElement("a");
           link.href = url;
-          link.download = true;
-          link.textContent = `📎 ${msg.text.split("/").pop()}`;
+          link.textContent = `📎 ${filename}`;
           link.target = "_blank";
           msgBlock.appendChild(link);
         }
+
+        // ✅ Кнопка «Скачать»
+        const downloadBtn = document.createElement("button");
+        downloadBtn.textContent = "📥";
+        downloadBtn.className = "download-btn";
+        downloadBtn.title = "Скачать файл";
+        downloadBtn.addEventListener("click", async () => {
+          try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(blobUrl);
+          } catch (err) {
+            console.error("Ошибка при скачивании файла:", err);
+          }
+        });
+
+        wrapper.appendChild(downloadBtn); // теперь всё корректно
       } else if (
         msg.type === "geo" ||
         (msg.text && msg.text.includes(",") && !msg.type)
@@ -220,9 +250,6 @@ document.addEventListener("DOMContentLoaded", () => {
       timeTag.textContent = timeLabel;
       msgBlock.appendChild(timeTag);
       msgBlock.id = `msg-${msg.id}`;
-
-      const wrapper = document.createElement("div");
-      wrapper.classList.add("message-wrapper");
 
       // ⭐ Избранное
       const starBtn = document.createElement("button");
@@ -248,6 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         localStorage.setItem("favorites", JSON.stringify(stored));
 
+        // eslint-disable-next-line
         const isInFavoritesView = document
           .querySelector(".sidebar li.active")
           ?.textContent.includes("Избранное");
@@ -462,7 +490,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const label = e.currentTarget.textContent.trim();
 
       if (label.includes("Избранное")) {
-        const favs = JSON.parse(localStorage.getItem("favorites") || "[]");
+        let favs = JSON.parse(localStorage.getItem("favorites") || "[]");
+
+        // фильтруем только те, которые реально существуют
+        favs = favs.filter((fav) =>
+          allMessages.find((msg) => msg.id === fav.id)
+        );
+
+        // обновим localStorage (чистим от удалённых)
+        localStorage.setItem("favorites", JSON.stringify(favs));
+
         renderMessages(favs, false, true);
       } else if (label.includes("Все")) {
         renderStart = Math.max(0, allMessages.length - CHUNK_SIZE);

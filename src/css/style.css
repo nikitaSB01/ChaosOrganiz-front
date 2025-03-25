@@ -309,6 +309,24 @@ a {
     cursor: pointer;
 }
 
+/* кнопка скачать */
+.download-btn {
+    font-size: 14px;
+    margin-right: 5px;
+    padding: 4px 8px;
+    background-color: #ffffff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    align-self: center;
+}
+
+.download-btn:hover {
+    background-color: #218838;
+}
+
 @keyframes blink {
     0% {
         outline-color: transparent;

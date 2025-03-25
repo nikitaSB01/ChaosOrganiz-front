@@ -109,8 +109,10 @@ body {
     bottom: 0;
 }
 
-.input-form input[type="text"] {
-    flex: 1;
+#message-input {
+    flex-grow: 1;
+    min-width: 0;
+    box-sizing: border-box;
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 6px;
